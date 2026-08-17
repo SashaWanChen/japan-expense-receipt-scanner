@@ -20,6 +20,8 @@
 
 ## 3. 建立 Notion 資料庫
 
+> 懶得手動建 12 欄？先做完步驟 2 拿到 `NOTION_TOKEN`，在 `.env.local` 填好並重啟，然後：**設定頁 → 自動建立 Notion 資料庫** → 在 Notion 開一個空白頁面並把 integration 加進去（右上 `⋯ → 連結`）→ 貼上頁面網址 → 一鍵建好，複製產生的 Database ID 當作 `NOTION_DATABASE_ID`。下面是手動建法。
+
 在任一頁面輸入 `/database` → **Table view / Database - Full page**，命名例如「日本旅行花費」，然後逐欄建立：
 
 | 欄位名稱 | 類型 | 設定 |

@@ -57,7 +57,7 @@ src/
 │       ├── analyze/route.ts      # Gemini Vision
 │       ├── debug/route.ts        # 健康檢查
 │       ├── login/route.ts        # 密碼驗證
-│       └── notion/{route,items,update,delete,rename-user}
+│       └── notion/{route,items,update,delete,rename-user,setup}
 ├── lib/                          # types, gemini, notion, settings, users,
 │                                 # cache, demo-mode, mock-data, region, image…
 ├── components/                   # BottomNav, Avatar, StatBar, ReceiptForm…
@@ -85,6 +85,7 @@ src/
 | `/api/notion/update` | POST | 更新記錄 |
 | `/api/notion/delete` | POST | 刪除（archive 到垃圾桶） |
 | `/api/notion/rename-user` | POST | 批次改名（舊名 → 新名） |
+| `/api/notion/setup` | POST | 一鍵建立符合 schema 的 Notion 資料庫（只需 `NOTION_TOKEN`） |
 | `/api/debug` | GET | 健康檢查（不顯示 key 內容） |
 | `/api/login` | GET / POST | 查詢是否啟用保護／驗證密碼 |
 

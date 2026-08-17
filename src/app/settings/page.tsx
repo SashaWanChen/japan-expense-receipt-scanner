@@ -18,6 +18,13 @@ interface DebugInfo {
   database: { title: string; properties: Array<{ name: string; type: string }> } | null;
 }
 
+interface SetupResult {
+  databaseId: string;
+  url: string;
+  title: string;
+  properties: Array<{ name: string; type: string }>;
+}
+
 export default function SettingsPage() {
   const { settings, update } = useSettings();
   const [message, setMessage] = useState("");
@@ -25,6 +32,10 @@ export default function SettingsPage() {
   const [newUserName, setNewUserName] = useState("");
   const [debug, setDebug] = useState<DebugInfo | null>(null);
   const [checking, setChecking] = useState(false);
+  const [setupPage, setSetupPage] = useState("");
+  const [setupBusy, setSetupBusy] = useState(false);
+  const [setupResult, setSetupResult] = useState<SetupResult | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const segments = parseTripSchedule(settings.tripSchedule);
 
@@ -81,6 +92,42 @@ export default function SettingsPage() {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setChecking(false);
+    }
+  }
+
+  /** 一鍵在指定 Notion 頁面底下建立資料庫，成功後顯示可複製的 Database ID。 */
+  async function runSetup() {
+    setSetupBusy(true);
+    setSetupResult(null);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/notion/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page: setupPage, exchangeRate: settings.exchangeRate }),
+      });
+      const data = (await response.json()) as SetupResult & { error?: string; hint?: string };
+      if (!response.ok) {
+        throw new Error([data.error, data.hint].filter(Boolean).join("\n") || "建立失敗");
+      }
+      setSetupResult(data);
+      setCopied(false);
+      setMessage("資料庫建立成功！請複製下方 Database ID 填入 NOTION_DATABASE_ID 後重啟。");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSetupBusy(false);
+    }
+  }
+
+  async function copyDatabaseId() {
+    if (!setupResult) return;
+    try {
+      await navigator.clipboard.writeText(setupResult.databaseId);
+      setCopied(true);
+    } catch {
+      setCopied(false);
     }
   }
 
@@ -277,6 +324,76 @@ export default function SettingsPage() {
           >
             重設 Demo 資料
           </button>
+        )}
+      </section>
+
+      <section className="card mb-4 p-4">
+        <h2 className="mb-1 text-base font-semibold">自動建立 Notion 資料庫</h2>
+        <p className="mb-2 text-xs" style={{ color: "var(--color-muted)" }}>
+          不想手動建 12 個欄位？貼上一個 Notion 頁面網址，一鍵建立好整個資料庫（含類別 / 支付方式選項與 TWD 公式）。
+        </p>
+        <ol
+          className="mb-3 list-decimal space-y-1 pl-5 text-xs"
+          style={{ color: "var(--color-muted)" }}
+        >
+          <li>先設定好 NOTION_TOKEN 並重啟（Demo 模式免此步）。</li>
+          <li>在 Notion 建立一個空白頁面，右上角「⋯ → 連結 / Connections」把你的 integration 加進去。</li>
+          <li>複製該頁面網址貼到下方，按「建立資料庫」。</li>
+          <li>把產生的 Database ID 填入 NOTION_DATABASE_ID 後重啟。</li>
+        </ol>
+        <input
+          className="field-input mb-2"
+          placeholder="https://www.notion.so/你的頁面-xxxxxxxx..."
+          aria-label="Notion 頁面網址或 ID"
+          value={setupPage}
+          onChange={(e) => setSetupPage(e.target.value)}
+        />
+        <button
+          type="button"
+          className="btn btn-primary w-full"
+          disabled={setupBusy || !setupPage.trim()}
+          onClick={() => void runSetup()}
+        >
+          {setupBusy ? "建立中…" : "建立資料庫"}
+        </button>
+
+        {setupResult && (
+          <div className="mt-3 space-y-2 text-sm">
+            <div>
+              <span className="font-semibold">已建立資料庫「{setupResult.title}」</span>
+            </div>
+            <div>
+              <div className="mb-1 text-xs" style={{ color: "var(--color-muted)" }}>
+                NOTION_DATABASE_ID（填進 .env.local 或 Codespaces secret 後重啟）
+              </div>
+              <div className="flex gap-2">
+                <code
+                  className="field-input flex-1 overflow-x-auto text-xs"
+                  style={{ whiteSpace: "nowrap" }}
+                >
+                  {setupResult.databaseId}
+                </code>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => void copyDatabaseId()}
+                >
+                  {copied ? "已複製" : "複製"}
+                </button>
+              </div>
+            </div>
+            {setupResult.url && (
+              <a
+                href={setupResult.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block text-xs underline"
+                style={{ color: "var(--color-accent)" }}
+              >
+                在 Notion 開啟這個資料庫 →
+              </a>
+            )}
+          </div>
         )}
       </section>
 

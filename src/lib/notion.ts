@@ -6,6 +6,8 @@
  * - 「金額 (TWD)」是 Notion formula，程式端不寫入
  */
 import { Client } from "@notionhq/client";
+import type { CreateDatabaseParameters } from "@notionhq/client";
+import { CATEGORIES, PAYMENT_METHODS } from "./types";
 import type { Receipt, ReceiptInput } from "./types";
 
 export const PROP = {
@@ -313,6 +315,92 @@ export async function checkNotion(): Promise<{
   return {
     databaseTitle: plainText(database.title) || "(未命名資料庫)",
     properties: Object.entries(schema).map(([name, value]) => ({ name, type: value.type })),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* 自動建立資料庫（一鍵建 12 欄，免手動）                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * 從 Notion 頁面網址或原始 ID 取出 32 碼 hex。
+ * - 支援完整網址（自動忽略 `?v=...` 等 query）
+ * - 支援有／無連字號的 UUID
+ * 取不到時丟出可讀的錯誤訊息。
+ */
+export function extractNotionId(input: string): string {
+  const raw = (input ?? "").trim();
+  if (!raw) throw new Error("請貼上 Notion 頁面網址或頁面 ID。");
+  // 只看 path，避免抓到網址 query 裡的 view id（?v=）。
+  const path = raw.split(/[?#]/)[0];
+  const hex = path.replace(/[^0-9a-fA-F]/g, "");
+  if (hex.length < 32) {
+    throw new Error("看不出 Notion 頁面 ID，請貼整段頁面網址（結尾 32 碼英數字）或 32 碼 ID。");
+  }
+  // 頁面 ID 一定是 path 結尾的 32 碼，取最後 32 碼即可（前面的 slug 可能夾雜英數）。
+  return hex.slice(-32).toLowerCase();
+}
+
+/** 依 App 需求產生 Notion 資料庫的欄位定義（欄位名稱來自 PROP，保證與讀寫端一致）。 */
+function databaseProperties(
+  exchangeRate: number,
+): NonNullable<CreateDatabaseParameters["initial_data_source"]>["properties"] {
+  return {
+    [PROP.title]: { title: {} },
+    [PROP.storeName]: { rich_text: {} },
+    [PROP.storeNameJa]: { rich_text: {} },
+    [PROP.itemsJa]: { rich_text: {} },
+    [PROP.date]: { date: {} },
+    [PROP.amountJPY]: { number: { format: "yen" } },
+    [PROP.amountTWD]: {
+      formula: { expression: `round(prop("${PROP.amountJPY}") * ${exchangeRate})` },
+    },
+    [PROP.category]: { select: { options: CATEGORIES.map((name) => ({ name })) } },
+    [PROP.paymentMethod]: { select: { options: PAYMENT_METHODS.map((name) => ({ name })) } },
+    [PROP.region]: { select: { options: [] } },
+    [PROP.user]: { rich_text: {} },
+    [PROP.note]: { rich_text: {} },
+  };
+}
+
+/**
+ * 一鍵在指定的 Notion 頁面底下建立一個符合本 App schema 的資料庫，
+ * 免使用者手動建 12 個欄位。只需要 NOTION_TOKEN（不需先有 NOTION_DATABASE_ID）。
+ * 回傳新資料庫的 ID（去連字號），使用者填進 NOTION_DATABASE_ID 即可。
+ */
+export async function setupDatabase(
+  parentPageId: string,
+  options?: { title?: string; exchangeRate?: number },
+): Promise<{
+  databaseId: string;
+  url: string;
+  title: string;
+  properties: Array<{ name: string; type: string }>;
+}> {
+  if (!process.env.NOTION_TOKEN) throw new MissingNotionConfigError(["NOTION_TOKEN"]);
+  const client = new Client({ auth: process.env.NOTION_TOKEN });
+
+  const title = options?.title?.trim() || "日本旅行花費";
+  const rate =
+    options?.exchangeRate && options.exchangeRate > 0 ? options.exchangeRate : 0.21;
+  const properties = databaseProperties(rate);
+
+  const database = (await client.databases.create({
+    parent: { type: "page_id", page_id: parentPageId },
+    title: [{ type: "text", text: { content: title } }],
+    initial_data_source: { properties },
+  })) as { id: string; url?: string; title?: Array<{ plain_text?: string }> };
+
+  const propertyList = Object.entries(properties ?? {}).map(([name, config]) => ({
+    name,
+    type: Object.keys(config).find((key) => key !== "type") ?? "unknown",
+  }));
+
+  return {
+    databaseId: database.id.replace(/-/g, ""),
+    url: database.url ?? "",
+    title: plainText(database.title) || title,
+    properties: propertyList,
   };
 }
 
