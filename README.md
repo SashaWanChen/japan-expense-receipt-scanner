@@ -1,0 +1,1 @@
+# japan-expense-receipt-scanner
