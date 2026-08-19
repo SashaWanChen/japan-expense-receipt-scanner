@@ -20,9 +20,7 @@ import {
 } from "./types";
 
 export const MODELS = [
-  "gemini-2.0-flash-001",
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
+  "gemini-3.6-flash",
 ] as const;
 
 export class MissingApiKeyError extends Error {
