@@ -169,3 +169,11 @@ npm run lint
 2. **Notion 當 DB 很實用**：辨識錯了可直接在 Notion UI 改；但要處理分頁（100 筆上限）、property 型別對應、schema 改過的相容問題。
 3. **Codespaces Private port 取代部署平台**：天然 HTTPS + GitHub 帳號驗證，個人自用不需要再做一套 auth。
 4. **圖片壓縮很有感**：手機照片 3-5MB，壓到最長邊 1024px 上傳快很多，辨識品質沒差。
+
+## 致謝
+
+架構與技術選型參考自 [chasehuang/japan-receipt-tracker-stack](https://github.com/chasehuang/japan-receipt-tracker-stack)，程式碼皆為本專案自行實作。
+
+## 授權
+
+本專案採用 [MIT License](LICENSE)。
