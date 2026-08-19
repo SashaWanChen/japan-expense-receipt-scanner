@@ -6,9 +6,9 @@ import Avatar from "@/components/Avatar";
 import Notice from "@/components/Notice";
 import PageHeader from "@/components/PageHeader";
 import StatBar from "@/components/StatBar";
-import { useReceipts, useSettings } from "@/lib/hooks";
+import { useReceipts, useSettings, useToday } from "@/lib/hooks";
 import { formatJPY, formatMoney, formatTWD, toTWD } from "@/lib/settings";
-import { byCategory, byUser, sumAmount, todayISO } from "@/lib/stats";
+import { byCategory, byUser, sumAmount } from "@/lib/stats";
 
 const SHORTCUTS = [
   { href: "/scan", label: "掃描收據", icon: "📷", hint: "拍照 AI 辨識" },
@@ -22,7 +22,7 @@ export default function DashboardPage() {
   const { settings, ready } = useSettings();
   const { receipts, loading, error } = useReceipts(ready);
 
-  const today = todayISO();
+  const today = useToday();
   const todayTotal = useMemo(
     () => sumAmount(receipts.filter((r) => r.date === today)),
     [receipts, today],
@@ -46,7 +46,7 @@ export default function DashboardPage() {
 
       <section className="card mb-4 p-4">
         <p className="text-sm" style={{ color: "var(--color-muted)" }}>
-          今日花費（{today}）
+          今日花費{today ? `（${today}）` : ""}
         </p>
         <p className="mt-1 text-3xl font-bold tabular-nums">{formatJPY(todayTotal)}</p>
         <p className="text-sm" style={{ color: "var(--color-muted)" }}>

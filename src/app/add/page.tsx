@@ -5,10 +5,9 @@ import { useMemo, useState } from "react";
 import Notice from "@/components/Notice";
 import PageHeader from "@/components/PageHeader";
 import ReceiptForm from "@/components/ReceiptForm";
-import { useSettings } from "@/lib/hooks";
+import { useSettings, useToday } from "@/lib/hooks";
 import { createReceipt } from "@/lib/receipts";
 import { regionForDate } from "@/lib/region";
-import { todayISO } from "@/lib/stats";
 import type { ReceiptInput } from "@/lib/types";
 
 function emptyReceipt(): ReceiptInput {
@@ -17,7 +16,7 @@ function emptyReceipt(): ReceiptInput {
     storeName: "",
     storeNameJa: "",
     itemsJa: "",
-    date: todayISO(),
+    date: "",
     amountJPY: 0,
     category: "餐飲",
     paymentMethod: "現金",
@@ -30,18 +29,24 @@ function emptyReceipt(): ReceiptInput {
 export default function AddPage() {
   const router = useRouter();
   const { settings } = useSettings();
+  const today = useToday();
   const [form, setForm] = useState<ReceiptInput>(() => emptyReceipt());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   // 地區與用戶用「衍生預設值」處理：使用者沒填時自動帶入，填了就以填的為準
+  // 日期同理：SSR/hydration 先留空，掛載後才用本機「今天」，避免 hydration 不一致
   const effective = useMemo<ReceiptInput>(
-    () => ({
-      ...form,
-      region: form.region || regionForDate(form.date, settings.tripSchedule),
-      user: form.user || (settings.users[0]?.name ?? ""),
-    }),
-    [form, settings.tripSchedule, settings.users],
+    () => {
+      const date = form.date || today;
+      return {
+        ...form,
+        date,
+        region: form.region || regionForDate(date, settings.tripSchedule),
+        user: form.user || (settings.users[0]?.name ?? ""),
+      };
+    },
+    [form, today, settings.tripSchedule, settings.users],
   );
 
   function patch(next: Partial<ReceiptInput>) {

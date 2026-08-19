@@ -10,6 +10,7 @@ import {
   SETTINGS_EVENT,
   SETTINGS_KEY,
 } from "./settings";
+import { todayISO } from "./stats";
 import type { AppSettings, Receipt } from "./types";
 
 /* -------------------------------------------------------------------------- */
@@ -69,6 +70,24 @@ export function useSettings(): {
   }, []);
 
   return { settings, update, ready };
+}
+
+/* -------------------------------------------------------------------------- */
+/* 今日日期：SSR 與首次 hydration 一律回傳空字串，掛載後才用本機時區的今天，          */
+/* 避免伺服器（UTC）與瀏覽器（當地時區）算出不同日期造成 hydration 不一致。          */
+/* -------------------------------------------------------------------------- */
+
+function subscribeToday(): () => void {
+  return () => {};
+}
+
+function getTodayServerSnapshot(): string {
+  return "";
+}
+
+/** 取得本機時區「今天」的 ISO 日期；伺服器與首次 client render 皆回傳空字串。 */
+export function useToday(): string {
+  return useSyncExternalStore(subscribeToday, todayISO, getTodayServerSnapshot);
 }
 
 /* -------------------------------------------------------------------------- */
