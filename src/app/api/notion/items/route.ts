@@ -10,6 +10,7 @@ interface ItemPayload {
   name?: string;
   nameJa?: string;
   price?: number;
+  user?: string;
 }
 
 /**
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
         title: name || nameJa || `品項 ${index + 1}`,
         itemsJa: nameJa,
         amountJPY: amounts[index],
+        user: (item.user ?? "").trim() || base.user,
         note: [base.note, `逐品項寫入 ${index + 1}/${items.length}（總額 ¥${base.amountJPY}）`]
           .filter(Boolean)
           .join(" / "),

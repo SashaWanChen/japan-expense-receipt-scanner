@@ -73,6 +73,32 @@ export default function ScanConfirmPage() {
     [items],
   );
 
+  const hasItemUsers = useMemo(
+    () => items.some((item) => (item.user ?? "").trim()),
+    [items],
+  );
+
+  // 各用戶小計：依逐品項寫入的比例分攤結果計算（差額補到最後一項）
+  const userTotals = useMemo<[string, number][]>(() => {
+    if (!form || !hasItemUsers || items.length === 0) return [];
+    const total = Math.round(form.amountJPY);
+    const sum = items.reduce((acc, item) => acc + Math.max(0, Number(item.price) || 0), 0);
+    const totals = new Map<string, number>();
+    let allocated = 0;
+    items.forEach((item, index) => {
+      const amount =
+        index === items.length - 1
+          ? total - allocated
+          : Math.round(
+              (sum > 0 ? Math.max(0, Number(item.price) || 0) / sum : 1 / items.length) * total,
+            );
+      allocated += amount;
+      const user = (item.user ?? "").trim() || form.user;
+      totals.set(user, (totals.get(user) ?? 0) + amount);
+    });
+    return [...totals.entries()];
+  }, [form, hasItemUsers, items]);
+
   function patch(next: Partial<ReceiptInput>) {
     setEdits((prev) => {
       const merged = { ...prev, ...next };
@@ -184,7 +210,9 @@ export default function ScanConfirmPage() {
           <button
             type="button"
             className="chip"
-            onClick={() => setItemEdits([...items, { name: "", nameJa: "", price: 0, taxRate: 10 }])}
+            onClick={() =>
+              setItemEdits([...items, { name: "", nameJa: "", price: 0, taxRate: 10, user: "" }])
+            }
           >
             ＋ 新增品項
           </button>
@@ -234,6 +262,19 @@ export default function ScanConfirmPage() {
                     </option>
                   ))}
                 </select>
+                <select
+                  className="field-input col-span-2"
+                  value={item.user ?? ""}
+                  aria-label={`品項 ${index + 1} 用戶`}
+                  onChange={(e) => patchItem(index, { user: e.target.value })}
+                >
+                  <option value="">同收據（{form.user}）</option>
+                  {settings.users.map((u) => (
+                    <option key={u.id} value={u.name}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <button
                 type="button"
@@ -251,6 +292,13 @@ export default function ScanConfirmPage() {
           <p className="mt-3 text-xs" style={{ color: "var(--color-muted)" }}>
             品項合計 {formatJPY(itemsTotal)}／收據總額 {formatJPY(form.amountJPY)}
             {itemsTotal !== form.amountJPY && "（逐品項寫入時會按比例分攤，差額補到最後一項）"}
+          </p>
+        )}
+
+        {userTotals.length > 1 && (
+          <p className="mt-1 text-xs" style={{ color: "var(--color-muted)" }}>
+            各用戶小計：
+            {userTotals.map(([user, amount]) => `${user} ${formatJPY(amount)}`).join("／")}
           </p>
         )}
       </section>
@@ -277,6 +325,11 @@ export default function ScanConfirmPage() {
         <p className="mt-2 text-sm" style={{ color: "var(--color-muted)" }}>
           {formatMoney(form.amountJPY, settings.exchangeRate)}
         </p>
+        {mode === "single" && hasItemUsers && (
+          <p className="mt-1 text-xs" style={{ color: "var(--color-muted)" }}>
+            有品項指定了不同用戶，一般寫入只會記成收據層級的「{form.user}」；要分人請改用逐品項寫入。
+          </p>
+        )}
       </section>
 
       <div className="mb-6 flex gap-3">
