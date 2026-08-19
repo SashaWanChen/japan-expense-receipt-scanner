@@ -17,6 +17,8 @@ interface Props {
   value: ReceiptInput;
   onChange: (patch: Partial<ReceiptInput>) => void;
   settings: AppSettings;
+  /** Notion 既有記錄出現過的用戶名（不在本機設定裡也能選） */
+  knownUserNames?: string[];
   /** AI 辨識的日文原文欄位（手動輸入頁不需要顯示日文原文時可關閉） */
   showJapanese?: boolean;
 }
@@ -26,6 +28,7 @@ export default function ReceiptForm({
   value,
   onChange,
   settings,
+  knownUserNames,
   showJapanese = true,
 }: Props) {
   const regions = useMemo(
@@ -186,6 +189,7 @@ export default function ReceiptForm({
         <span className="field-label">用戶（誰付的）</span>
         <UserPicker
           users={settings.users}
+          knownNames={knownUserNames}
           value={value.user}
           onChange={(user) => onChange({ user })}
           allowEmpty

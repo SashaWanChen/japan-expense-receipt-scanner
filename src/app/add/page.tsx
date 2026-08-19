@@ -5,9 +5,10 @@ import { useMemo, useState } from "react";
 import Notice from "@/components/Notice";
 import PageHeader from "@/components/PageHeader";
 import ReceiptForm from "@/components/ReceiptForm";
-import { useSettings, useToday } from "@/lib/hooks";
+import { useReceipts, useSettings, useToday } from "@/lib/hooks";
 import { createReceipt } from "@/lib/receipts";
 import { regionForDate } from "@/lib/region";
+import { usedUserNames } from "@/lib/stats";
 import type { ReceiptInput } from "@/lib/types";
 
 function emptyReceipt(): ReceiptInput {
@@ -28,7 +29,9 @@ function emptyReceipt(): ReceiptInput {
 
 export default function AddPage() {
   const router = useRouter();
-  const { settings } = useSettings();
+  const { settings, ready } = useSettings();
+  // 只為了列出 Notion 既有的用戶名；載入失敗或載入中都不影響表單
+  const { receipts } = useReceipts(ready);
   const today = useToday();
   const [form, setForm] = useState<ReceiptInput>(() => emptyReceipt());
   const [saving, setSaving] = useState(false);
@@ -47,6 +50,11 @@ export default function AddPage() {
       };
     },
     [form, today, settings.tripSchedule, settings.users],
+  );
+
+  const knownUserNames = useMemo(
+    () => Array.from(new Set([...settings.users.map((u) => u.name), ...usedUserNames(receipts)])),
+    [settings.users, receipts],
   );
 
   function patch(next: Partial<ReceiptInput>) {
@@ -83,7 +91,12 @@ export default function AddPage() {
       {error && <Notice tone="error">{error}</Notice>}
 
       <section className="card mb-4 p-4">
-        <ReceiptForm value={effective} onChange={patch} settings={settings} />
+        <ReceiptForm
+          value={effective}
+          onChange={patch}
+          settings={settings}
+          knownUserNames={knownUserNames}
+        />
       </section>
 
       <div className="mb-6 flex gap-3">
