@@ -183,6 +183,7 @@ export default function HistoryPage() {
                   value={draft}
                   onChange={(patch) => setDraft({ ...draft, ...patch })}
                   settings={settings}
+                  knownUserNames={userNames}
                 />
                 <div className="mt-4 flex gap-3">
                   <button

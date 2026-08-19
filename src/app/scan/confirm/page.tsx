@@ -7,7 +7,7 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import Notice from "@/components/Notice";
 import PageHeader from "@/components/PageHeader";
 import ReceiptForm from "@/components/ReceiptForm";
-import { useSettings } from "@/lib/hooks";
+import { useReceipts, useSettings } from "@/lib/hooks";
 import { createReceipt, createReceiptItems } from "@/lib/receipts";
 import { regionForDate } from "@/lib/region";
 import {
@@ -17,7 +17,7 @@ import {
   subscribeScan,
 } from "@/lib/scan-store";
 import { formatJPY, formatMoney } from "@/lib/settings";
-import { todayISO } from "@/lib/stats";
+import { todayISO, usedUserNames } from "@/lib/stats";
 import {
   TAX_RATES,
   TAX_TYPES,
@@ -29,7 +29,9 @@ import {
 
 export default function ScanConfirmPage() {
   const router = useRouter();
-  const { settings } = useSettings();
+  const { settings, ready } = useSettings();
+  // 只為了列出 Notion 既有的用戶名；載入失敗或載入中都不影響表單
+  const { receipts } = useReceipts(ready);
   const payload = useSyncExternalStore(subscribeScan, getScanSnapshot, getScanServerSnapshot);
 
   // AI 結果當作預設值，使用者改過的欄位存在 edits，兩者合併後就是表單內容
@@ -61,6 +63,11 @@ export default function ScanConfirmPage() {
     if (!merged.region) merged.region = regionForDate(merged.date, settings.tripSchedule);
     return merged;
   }, [payload, edits, settings.tripSchedule, settings.users]);
+
+  const knownUserNames = useMemo(
+    () => Array.from(new Set([...settings.users.map((u) => u.name), ...usedUserNames(receipts)])),
+    [settings.users, receipts],
+  );
 
   const items = useMemo(
     () => itemEdits ?? payload?.result.itemList ?? [],
@@ -201,7 +208,12 @@ export default function ScanConfirmPage() {
       </section>
 
       <section className="card mb-4 p-4">
-        <ReceiptForm value={form} onChange={patch} settings={settings} />
+        <ReceiptForm
+          value={form}
+          onChange={patch}
+          settings={settings}
+          knownUserNames={knownUserNames}
+        />
       </section>
 
       <section className="card mb-4 p-4">
@@ -269,9 +281,9 @@ export default function ScanConfirmPage() {
                   onChange={(e) => patchItem(index, { user: e.target.value })}
                 >
                   <option value="">同收據（{form.user}）</option>
-                  {settings.users.map((u) => (
-                    <option key={u.id} value={u.name}>
-                      {u.name}
+                  {knownUserNames.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
                     </option>
                   ))}
                 </select>
