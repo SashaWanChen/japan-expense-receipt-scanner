@@ -42,7 +42,7 @@
 
 > `NOTION_DATABASE_ID` 要等步驟 5 才拿得到。可先建立前兩個 secret，開 Codespace 完成步驟 4 的自動建立資料庫，再回來補上這一個並 Rebuild。
 
-**不要**在 Codespace 或本機建立 `.env.local`。Secrets 會直接注入成環境變數，程式讀得到；多一份檔案只會增加金鑰外洩風險。
+> ⚠️ **不要在 Codespace 裡建立 `.env.local`。** Next.js 的 `.env.local` 優先權**高於**系統環境變數，只要檔案存在就會蓋掉 Codespaces secrets 注入的值。常見災情是：檔案裡留了空白的 `NOTION_TOKEN=`，結果 secret 明明設好了，畫面卻一直報「尚未設定 NOTION_TOKEN」，而且很難查。Secrets 已經直接注入成環境變數，程式讀得到，不需要這個檔案。
 
 ## 4. 建立 Notion 資料庫
 
@@ -156,7 +156,7 @@ Public port 等於任何人拿到網址都能開，**一定要設 `APP_PASSWORD`
 
 | 訊息 | 原因 / 解法 |
 |:--|:--|
-| `尚未設定 NOTION_TOKEN...` | Codespaces secret 沒建、沒勾本 repo，或 Codespace 沒 Rebuild（見步驟 3） |
+| `尚未設定 NOTION_TOKEN...` | Codespaces secret 沒建、沒勾本 repo、Codespace 沒 Rebuild，或 Codespace 內殘留 `.env.local` 蓋掉了 secret（見步驟 3） |
 | `object_not_found` | 資料庫沒有分享給 integration（見步驟 5） |
 | `Could not find property` | 欄位名稱與規格不一致，請比對步驟 4 的表格 |
 | 掃描回「所有模型都失敗」 | Gemini key 無效、超過額度，或圖片太模糊 |

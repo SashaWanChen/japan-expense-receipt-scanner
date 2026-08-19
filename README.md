@@ -1,8 +1,10 @@
 # 日本旅行記帳 — AI 收據掃描
 
-> TL;DR：手機拍日文收據 → Gemini 辨識翻譯分類 → 寫進 Notion。跑在 GitHub Codespaces 的 **Private 轉發埠**或本機，成本 **$0/月**。
+> TL;DR：手機拍日文收據 → Gemini 辨識翻譯分類 → 寫進 Notion。跑在 GitHub Codespaces 的 **Private 轉發埠**，成本 **$0/月**。
 
 第一次使用請看 [docs/SETUP.md](docs/SETUP.md)。沒有 API key 也可以在「設定 → Demo 模式」用 55 筆假資料瀏覽完整 UI。
+
+**執行環境：GitHub Codespaces（唯一支援方式）。** 掃描收據要開相機，瀏覽器只在 HTTPS 下允許；Codespaces 轉發埠天生是 HTTPS，手機登入同一個 GitHub 帳號就能用。本機 `localhost` 手機連不到也叫不出相機，因此不提供本機流程。
 
 ## 功能
 
@@ -24,10 +26,9 @@
 
 ```
 手機瀏覽器 (PWA)
-   │  https://<codespace>-3000.app.github.dev（Private 轉發埠）
-   │  或 http://localhost:3000
+   │  https://<codespace>-3000.app.github.dev（Private 轉發埠，HTTPS）
    ▼
-Next.js App Router（頁面 + API Routes）
+Next.js App Router（頁面 + API Routes）※ 跑在 Codespace 內
    ├─▶ Gemini 2.0 Flash（Vision AI：OCR + 翻譯 + 分類）
    └─▶ Notion API（資料庫，可在 Notion UI 直接修正）
 ```
@@ -42,7 +43,7 @@ Next.js App Router（頁面 + API Routes）
 | AI / OCR | **Gemini 2.0 Flash** | 圖片辨識 + 日文翻譯 + 結構化 JSON，一個 API call |
 | Database | **Notion** | 免費、有 GUI 可手動修正、可匯出 |
 | State | React hooks + localStorage | 不用 Redux / Zustand |
-| 執行環境 | GitHub Codespaces（Private port）／本機 | 不需部署平台，天然 HTTPS |
+| 執行環境 | **GitHub Codespaces**（Private port） | 不需部署平台，天然 HTTPS，GitHub 帳號即身分驗證 |
 
 > 圖表全部用純 CSS / SVG 手刻，沒有引入 Chart.js / Recharts。
 
@@ -93,50 +94,43 @@ src/
 
 ## 開始使用
 
-```bash
-cp .env.local.example .env.local   # 填入 GEMINI_API_KEY / NOTION_TOKEN / NOTION_DATABASE_ID
-npm install
-npm run dev                        # http://localhost:3000
-```
+完整步驟見 [docs/SETUP.md](docs/SETUP.md)，摘要如下：
 
-### 主要方案：Codespaces + **Private** 轉發埠
-
-1. repo 頁面 → Code → Codespaces → 開新的 Codespace
-2. `npm run dev`
-3. PORTS 面板確認 port 3000 的 visibility 維持 **Private**（預設值）
-4. 手機瀏覽器登入同一個 GitHub 帳號，開 `https://<codespace-name>-3000.app.github.dev`
+1. 取得 `GEMINI_API_KEY`（Google AI Studio）與 `NOTION_TOKEN`（Notion integration）
+2. 到 <https://github.com/settings/codespaces> 建立 **Codespaces secrets**，Repository access 勾選本 repo
+3. repo 頁 → **Code → Codespaces → Create codespace on main**（devcontainer 會自動 `npm install`）
+4. 終端機執行 `npm run dev`
+5. **PORTS** 面板確認 port 3000 的 visibility 維持 **Private**（預設值）
+6. 手機瀏覽器登入同一個 GitHub 帳號，開 `https://<codespace-name>-3000.app.github.dev`
 
 好處：不用自己電腦開機、天然 HTTPS（PWA 與相機必要）、只有自己能存取，**不需再設密碼**。
 
 注意事項：
 
-- Codespace 閒置一段時間會自動停止，用之前先回 GitHub 重啟
-- 手機要保持 GitHub 登入狀態
+- Codespace 閒置一段時間會自動停止，用之前先回 GitHub 重啟並重跑 `npm run dev`
+- 手機要保持 GitHub 登入狀態，別用無痕模式
 - PWA standalone 模式可能因 cookie 隔離而要求重新登入，遇到就改用瀏覽器開
 
-### 替代方案
-
-| 方案 | 指令 | 備註 |
-|:--|:--|:--|
-| Cloudflare Tunnel | `cloudflared tunnel --url http://localhost:3000` | 隨機 `*.trycloudflare.com` 網址，本機要開著 |
-| Tailscale Funnel | `tailscale funnel 3000` | 固定 `*.ts.net`，只有自己的 tailnet 進得去 |
-
-### 密碼保護（可選）
-
-- **沒設定 `APP_PASSWORD` → 完全不啟用**，適合 Codespaces Private port 自己用
-- 有設定 → 未登入一律導向 `/login`，cookie 為 httpOnly
-- 想分享給旅伴：把 port 3000 改成 **Public** 並設定 `APP_PASSWORD`
-
 ## 環境變數
+
+一律透過 **Codespaces secrets** 設定，不使用 `.env.local`。
 
 | 變數 | 必填 | 說明 |
 |:--|:--|:--|
 | `GEMINI_API_KEY` | 掃描功能需要 | Google AI Studio |
 | `NOTION_TOKEN` | 是 | Notion integration token |
 | `NOTION_DATABASE_ID` | 是 | 資料庫 ID |
-| `APP_PASSWORD` | 否 | 留空則不啟用密碼保護 |
+| `APP_PASSWORD` | 否 | 留空則不啟用密碼保護；port 改 Public 時必設 |
 
 缺少時不會 crash，畫面會顯示清楚的錯誤與引導；`/api/debug` 可查連線狀態。
+
+> ⚠️ 不要在 Codespace 內建立 `.env.local`。Next.js 的 `.env.local` 優先權高於系統環境變數，會直接蓋掉 Codespaces secrets 注入的值——留一行空白的 `NOTION_TOKEN=` 就足以讓設定好的 secret 失效，且錯誤訊息不會告訴你原因。
+
+### 密碼保護（可選）
+
+- **沒設定 `APP_PASSWORD` → 完全不啟用**，適合 Codespaces Private port 自己用
+- 有設定 → 未登入一律導向 `/login`，cookie 為 httpOnly
+- 想分享給旅伴：把 port 3000 改成 **Public** 並設定 `APP_PASSWORD`
 
 ## Notion 資料庫欄位
 
@@ -160,6 +154,8 @@ npm run dev                        # http://localhost:3000
 | **Total** | **$0/月** |
 
 ## 驗收
+
+在 Codespace 終端機執行：
 
 ```bash
 npm run build
