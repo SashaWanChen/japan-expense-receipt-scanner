@@ -25,6 +25,17 @@ interface SetupResult {
   properties: Array<{ name: string; type: string }>;
 }
 
+function setupErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("Can't create databases parented by a database")) {
+    return "這個網址是 Notion 資料庫，不是一般頁面。請新增一個空白頁面，把 integration「japan-expense-receipt-scanner」連結到該頁面，再貼上空白頁面的網址。";
+  }
+  if (message.includes("Could not find page with ID") || message.includes("shared with your integration")) {
+    return "Notion 尚未授權這個頁面。請在該頁面右上角點「⋯」→「連結 / Connections」，加入 integration「japan-expense-receipt-scanner」，再按一次建立資料庫。";
+  }
+  return message;
+}
+
 export default function SettingsPage() {
   const { settings, update } = useSettings();
   const [message, setMessage] = useState("");
@@ -35,6 +46,7 @@ export default function SettingsPage() {
   const [setupPage, setSetupPage] = useState("");
   const [setupBusy, setSetupBusy] = useState(false);
   const [setupResult, setSetupResult] = useState<SetupResult | null>(null);
+  const [setupError, setSetupError] = useState("");
   const [copied, setCopied] = useState(false);
 
   const segments = parseTripSchedule(settings.tripSchedule);
@@ -99,7 +111,7 @@ export default function SettingsPage() {
   async function runSetup() {
     setSetupBusy(true);
     setSetupResult(null);
-    setError("");
+    setSetupError("");
     setMessage("");
     try {
       const response = await fetch("/api/notion/setup", {
@@ -115,7 +127,7 @@ export default function SettingsPage() {
       setCopied(false);
       setMessage("資料庫建立成功！請複製下方 Database ID 填入 NOTION_DATABASE_ID 後重啟。");
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setSetupError(setupErrorMessage(err));
     } finally {
       setSetupBusy(false);
     }
@@ -356,6 +368,8 @@ export default function SettingsPage() {
         >
           {setupBusy ? "建立中…" : "建立資料庫"}
         </button>
+
+        {setupError && <Notice tone="error">{setupError}</Notice>}
 
         {setupResult && (
           <div className="mt-3 space-y-2 text-sm">
