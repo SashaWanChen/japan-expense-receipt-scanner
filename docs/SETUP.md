@@ -1,6 +1,11 @@
 # 安裝設定指南
 
-> TL;DR：拿 Gemini key → 建 Notion 資料庫 → 填 `.env.local` → `npm install && npm run dev` → Codespaces port 3000 保持 Private，手機直接開。
+> TL;DR：拿 Gemini key → 建 Notion 資料庫 → 設 **Codespaces secrets** → 開 Codespace 跑 `npm run dev` → port 3000 保持 Private → 手機登入同一個 GitHub 帳號直接開。
+
+**本專案一律使用 GitHub Codespaces 執行，不支援本機開發流程。**
+原因：掃描收據需要呼叫相機，瀏覽器只在 HTTPS（安全來源）下允許。Codespaces 轉發埠本來就是 HTTPS（`app.github.dev`），手機開了就能拍照；本機的 `http://localhost:3000` 在手機上既連不到、也叫不出相機。
+
+金鑰一律存在 **Codespaces secrets**，不會落在任何本機資料夾，也不會進 repo。
 
 沒有 API key 也能先玩：啟動後到「設定 → Demo 模式」打開，即可用假資料瀏覽所有頁面。
 
@@ -18,11 +23,32 @@
 2. Name 隨意（例如 `Receipt Scanner`），Type 選 **Internal**
 3. 建立後複製 **Internal Integration Secret**（`ntn_...` 或 `secret_...`），這是 `NOTION_TOKEN`
 
-## 3. 建立 Notion 資料庫
+## 3. 設定 Codespaces Secrets
 
-> 懶得手動建 12 欄？先做完步驟 2 拿到 `NOTION_TOKEN`，在 `.env.local` 填好並重啟，然後：**設定頁 → 自動建立 Notion 資料庫** → 在 Notion 開一個空白頁面並把 integration 加進去（右上 `⋯ → 連結`）→ 貼上頁面網址 → 一鍵建好，複製產生的 Database ID 當作 `NOTION_DATABASE_ID`。下面是手動建法。
+這是本專案**唯一**的金鑰設定方式。
 
-在任一頁面輸入 `/database` → **Table view / Database - Full page**，命名例如「日本旅行花費」，然後逐欄建立：
+1. 開 <https://github.com/settings/codespaces> → **Codespaces secrets** → **New secret**
+2. 依序新增：
+
+   | Secret 名稱 | 值 | 必要性 |
+   |:--|:--|:--|
+   | `GEMINI_API_KEY` | 步驟 1 的 `AIza...` | 必填 |
+   | `NOTION_TOKEN` | 步驟 2 的 `ntn_...` | 必填 |
+   | `NOTION_DATABASE_ID` | 步驟 5 取得後補上 | 必填 |
+   | `APP_PASSWORD` | 自訂密碼 | port 設為 Public 時**必填** |
+
+3. 每個 secret 的 **Repository access** 都要勾選本 repo
+4. 已經開著的 Codespace 需 **Rebuild container**（或停掉重開）才會讀到新 secret
+
+> `NOTION_DATABASE_ID` 要等步驟 5 才拿得到。可先建立前兩個 secret，開 Codespace 完成步驟 4 的自動建立資料庫，再回來補上這一個並 Rebuild。
+
+**不要**在 Codespace 或本機建立 `.env.local`。Secrets 會直接注入成環境變數，程式讀得到；多一份檔案只會增加金鑰外洩風險。
+
+## 4. 建立 Notion 資料庫
+
+> 懶得手動建 12 欄？做完步驟 3 的前兩個 secret 後，開 Codespace 跑起來（見步驟 7），到 **設定頁 → 自動建立 Notion 資料庫** → 在 Notion 開一個空白頁面並分享給 integration，程式會幫你把欄位一次建好。
+
+手動建立：在任一頁面輸入 `/database` → **Table view / Database - Full page**，命名例如「日本旅行花費」，然後逐欄建立：
 
 | 欄位名稱 | 類型 | 設定 |
 |:--|:--|:--|
@@ -49,13 +75,13 @@ round(prop("金額 (JPY)") * 0.21)
 > Select 的選項不先建也可以，Notion 會在寫入時自動新增。
 > 欄位名稱要**完全一致**（含空格與半形括號），程式靠名稱對應。
 
-## 4. 分享資料庫給 Integration
+## 5. 分享資料庫給 Integration
 
 資料庫頁面右上角 `⋯` → **Connections / 連結** → 搜尋你剛建立的 integration → Confirm。
 
 沒做這步會一直收到 `object_not_found`。
 
-## 5. 取得 Database ID
+## 6. 取得 Database ID
 
 資料庫頁面 → Share → Copy link，網址長這樣：
 
@@ -64,56 +90,34 @@ https://www.notion.so/<workspace>/1a2b3c4d5e6f7890abcdef1234567890?v=...
                                   └────────── Database ID ──────────┘
 ```
 
-`?` 前面那 32 碼英數字就是 `NOTION_DATABASE_ID`（有沒有連字號都可以）。
+`?` 前面那 32 碼英數字就是 `NOTION_DATABASE_ID`（有沒有連字號都可以）。拿到後回步驟 3 新增這個 secret，並 Rebuild Codespace。
 
-## 6. 環境變數
-
-### 本機
-
-```bash
-cp .env.local.example .env.local
-```
-
-```
-GEMINI_API_KEY=AIza...
-NOTION_TOKEN=ntn_...
-NOTION_DATABASE_ID=1a2b3c4d5e6f7890abcdef1234567890
-APP_PASSWORD=          # 留空 = 不啟用密碼保護
-```
-
-`.env.local` 已被 `.gitignore` 排除，不會 commit。
-
-### Codespaces（建議）
-
-不要把 key 放進 repo，改用 secrets：
-
-1. <https://github.com/settings/codespaces> → **Codespaces secrets** → New secret
-2. 依序新增 `GEMINI_API_KEY`、`NOTION_TOKEN`、`NOTION_DATABASE_ID`（必要時 `APP_PASSWORD`）
-3. Repository access 勾選本 repo
-4. 已開著的 Codespace 要 **Rebuild / 重啟** 才會讀到新 secret
-
-## 7. 啟動
-
-```bash
-npm install
-npm run dev
-```
-
-開 <http://localhost:3000>。到「設定 → 連線健康檢查」按「執行檢查」，Gemini 與 Notion 都顯示正常就代表串接成功。
-
-## 8. Codespaces Private 轉發埠（手機使用）
+## 7. 開 Codespace 並啟動
 
 1. repo 頁 → **Code → Codespaces → Create codespace on main**
    （`.devcontainer/devcontainer.json` 會自動跑 `npm install`）
-2. 終端機執行 `npm run dev`
-3. 切到 **PORTS** 面板，確認 port 3000 的 Visibility 是 **Private**（預設就是）
-4. 複製 Forwarded Address，形如 `https://<codespace-name>-3000.app.github.dev`
-5. 手機瀏覽器**先登入同一個 GitHub 帳號**，再開這個網址
+2. 終端機執行：
+
+   ```bash
+   npm run dev
+   ```
+
+3. 在 Codespace 內建瀏覽器分頁開起來後，到「設定 → 連線健康檢查」按「執行檢查」，Gemini 與 Notion 都顯示正常就代表串接成功。
+
+檢查失敗時多半是 secret 沒生效——確認步驟 3 的 Repository access 有勾本 repo，然後 Rebuild container。
+
+## 8. 手機開啟（Private 轉發埠）
+
+1. 切到 **PORTS** 面板，確認 port 3000 的 Visibility 是 **Private**（預設就是）
+2. 複製 Forwarded Address，形如 `https://<codespace-name>-3000.app.github.dev`
+3. 手機瀏覽器**先登入同一個 GitHub 帳號**，再開這個網址
+
+把網址用訊息傳給自己（LINE / Slack 記事本）最快，不用手打。
 
 | 情境 | 設定 |
 |:--|:--|
-| 只有自己用 | Private port，`APP_PASSWORD` 留空 |
-| 要分享給旅伴 | port 改 **Public** + 設定 `APP_PASSWORD` |
+| 只有自己用 | Private port，`APP_PASSWORD` 可不設 |
+| 要分享給旅伴 | port 改 **Public** + 設定 `APP_PASSWORD` secret |
 
 Public port 等於任何人拿到網址都能開，**一定要設 `APP_PASSWORD`**。
 
@@ -124,37 +128,18 @@ Public port 等於任何人拿到網址都能開，**一定要設 `APP_PASSWORD`
 | 網址打不開 | Codespace 閒置 30 分鐘會自動停止，回 GitHub 重啟並重跑 `npm run dev` |
 | 一直跳 GitHub 登入 | 手機瀏覽器要保持登入狀態，別用無痕模式 |
 | PWA 開啟要求重新登入 | standalone 模式 cookie 隔離，改用瀏覽器開即可 |
-| 相機叫不出來 | 必須是 HTTPS；`app.github.dev` 本來就是 HTTPS，本機請用 tunnel |
+| 每次重開網址都變 | Codespace 名稱固定，網址就固定；刪掉重建才會變 |
 
 ## 9. 加到手機桌面（PWA）
+
+先完成步驟 8，確認手機瀏覽器打得開網址，再做這一步：
 
 - **iPhone / Safari**：分享鈕 → 加入主畫面
 - **Android / Chrome**：右上 `⋮` → 安裝應用程式 / 加到主畫面
 
-開啟後是全螢幕 standalone 模式，跟 App 一樣。
+開啟後是全螢幕 standalone 模式，跟 App 一樣。注意桌面圖示指向的仍是 Codespace 網址，所以**每次要用之前，Codespace 必須是啟動狀態且 `npm run dev` 有在跑**。
 
-## 10. 替代方案（不用 Codespaces）
-
-### Cloudflare Tunnel
-
-```bash
-npm run dev
-cloudflared tunnel --url http://localhost:3000
-```
-
-會拿到隨機 `https://xxx.trycloudflare.com` 網址（每次重跑都會變）。**公開網址請務必設定 `APP_PASSWORD`。**
-
-### Tailscale Funnel
-
-```bash
-tailscale funnel 3000
-```
-
-固定 `https://<device>.<tailnet>.ts.net`，只有你的 tailnet 裝置進得去，最安全。
-
-兩者的網域都已列在 `next.config.ts` 的 `allowedDevOrigins`。
-
-## 11. App 內設定
+## 10. App 內設定
 
 「設定」頁存於瀏覽器 localStorage（每台裝置獨立）：
 
@@ -171,8 +156,9 @@ tailscale funnel 3000
 
 | 訊息 | 原因 / 解法 |
 |:--|:--|
-| `尚未設定 NOTION_TOKEN...` | `.env.local` 沒填或沒重啟 dev server |
-| `object_not_found` | 資料庫沒有分享給 integration（見步驟 4） |
-| `Could not find property` | 欄位名稱與規格不一致，請比對步驟 3 的表格 |
+| `尚未設定 NOTION_TOKEN...` | Codespaces secret 沒建、沒勾本 repo，或 Codespace 沒 Rebuild（見步驟 3） |
+| `object_not_found` | 資料庫沒有分享給 integration（見步驟 5） |
+| `Could not find property` | 欄位名稱與規格不一致，請比對步驟 4 的表格 |
 | 掃描回「所有模型都失敗」 | Gemini key 無效、超過額度，或圖片太模糊 |
 | 金額辨識錯誤 | 在 `/scan/confirm` 直接改；日本收據排版差異大屬正常 |
+| 相機叫不出來 | 確認網址是 `https://...app.github.dev`，且瀏覽器已允許相機權限 |
