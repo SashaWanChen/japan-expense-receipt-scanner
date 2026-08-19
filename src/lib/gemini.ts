@@ -26,7 +26,7 @@ export const MODELS = [
 export class MissingApiKeyError extends Error {
   constructor() {
     super(
-      "尚未設定 GEMINI_API_KEY。請在 .env.local（或 Codespaces secrets）加入 Google AI Studio 取得的 API key，或先在設定頁開啟 Demo 模式。",
+      "尚未設定 GEMINI_API_KEY。請到 GitHub Codespaces secrets 設定 GEMINI_API_KEY（Google AI Studio 取得）後 Rebuild container，或先在設定頁開啟 Demo 模式。（請勿建立 .env.local，會蓋掉 secrets）",
     );
     this.name = "MissingApiKeyError";
   }

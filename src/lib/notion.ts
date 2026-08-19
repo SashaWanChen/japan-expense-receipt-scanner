@@ -28,7 +28,7 @@ export const PROP = {
 export class MissingNotionConfigError extends Error {
   constructor(missing: string[]) {
     super(
-      `尚未設定 ${missing.join("、")}。請在 .env.local（或 Codespaces secrets）補齊後重新啟動，或先在設定頁開啟 Demo 模式。`,
+      `尚未設定 ${missing.join("、")}。請到 GitHub Codespaces secrets 補齊後 Rebuild container，或先在設定頁開啟 Demo 模式。（請勿建立 .env.local，會蓋掉 secrets）`,
     );
     this.name = "MissingNotionConfigError";
   }

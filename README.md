@@ -124,7 +124,7 @@ src/
 
 缺少時不會 crash，畫面會顯示清楚的錯誤與引導；`/api/debug` 可查連線狀態。
 
-> ⚠️ 不要在 Codespace 內建立 `.env.local`。Next.js 的 `.env.local` 優先權高於系統環境變數，會直接蓋掉 Codespaces secrets 注入的值——留一行空白的 `NOTION_TOKEN=` 就足以讓設定好的 secret 失效，且錯誤訊息不會告訴你原因。
+> ⚠️ 不要在 Codespace 內建立 `.env.local`，它會蓋掉 Codespaces secrets 注入的值。詳見 [docs/SETUP.md](docs/SETUP.md)。
 
 ### 密碼保護（可選）
 

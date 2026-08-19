@@ -125,7 +125,7 @@ export default function SettingsPage() {
       }
       setSetupResult(data);
       setCopied(false);
-      setMessage("資料庫建立成功！請複製下方 Database ID 填入 NOTION_DATABASE_ID 後重啟。");
+      setMessage("資料庫建立成功！請複製下方 Database ID 設為 Codespaces secret NOTION_DATABASE_ID 後 Rebuild container。");
     } catch (err) {
       setSetupError(setupErrorMessage(err));
     } finally {
@@ -348,10 +348,10 @@ export default function SettingsPage() {
           className="mb-3 list-decimal space-y-1 pl-5 text-xs"
           style={{ color: "var(--color-muted)" }}
         >
-          <li>先設定好 NOTION_TOKEN 並重啟（Demo 模式免此步）。</li>
+          <li>先設定好 NOTION_TOKEN（設為 Codespaces secret 後 Rebuild container；Demo 模式免此步）。</li>
           <li>在 Notion 建立一個空白頁面，右上角「⋯ → 連結 / Connections」把你的 integration 加進去。</li>
           <li>複製該頁面網址貼到下方，按「建立資料庫」。</li>
-          <li>把產生的 Database ID 填入 NOTION_DATABASE_ID 後重啟。</li>
+          <li>把產生的 Database ID 設為 Codespaces secret NOTION_DATABASE_ID 後 Rebuild container。</li>
         </ol>
         <input
           className="field-input mb-2"
@@ -378,7 +378,7 @@ export default function SettingsPage() {
             </div>
             <div>
               <div className="mb-1 text-xs" style={{ color: "var(--color-muted)" }}>
-                NOTION_DATABASE_ID（填進 .env.local 或 Codespaces secret 後重啟）
+                NOTION_DATABASE_ID（填進 Codespaces secret 後 Rebuild container）
               </div>
               <div className="flex gap-2">
                 <code
