@@ -62,6 +62,7 @@ export async function createReceiptItems(
         title: item.name || item.nameJa || `品項 ${index + 1}`,
         itemsJa: item.nameJa,
         amountJPY: amount,
+        user: (item.user ?? "").trim() || base.user,
       };
     });
     demoCreateMany(inputs);
@@ -69,7 +70,16 @@ export async function createReceiptItems(
   }
   await request("/api/notion/items", {
     method: "POST",
-    body: JSON.stringify({ ...base, items }),
+    body: JSON.stringify({
+      ...base,
+      items: items.map((item) => ({
+        name: item.name,
+        nameJa: item.nameJa,
+        price: item.price,
+        taxRate: item.taxRate,
+        user: item.user ?? "",
+      })),
+    }),
   });
 }
 

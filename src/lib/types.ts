@@ -32,6 +32,8 @@ export interface ReceiptItem {
   nameJa: string;
   price: number;
   taxRate: TaxRate;
+  /** 這一項由誰買單；空字串或未設定表示沿用收據層級的用戶 */
+  user?: string;
 }
 
 /** Gemini Vision 回傳的收據辨識結果。 */
